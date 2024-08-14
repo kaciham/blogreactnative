@@ -1,5 +1,6 @@
 const { DataTypes } = require('sequelize');
 const sequelize = require('../configs/sequelize')
+const bcrypt = require('bcrypt');
 
 const Account = sequelize.define("Account", {
     accountId: {
@@ -13,33 +14,48 @@ const Account = sequelize.define("Account", {
     },
     lastName: {
         type: DataTypes.STRING,
-        required: true,
+        required: true
     },
     email: {
         type: DataTypes.STRING,
         required: true,
-        unique: true,
+        // unique: true,
         validate: {
             isEmail: true,
-        }
+        },
     },
     password: {
         type: DataTypes.STRING,
-        required: true,
+        allowNull: false,
+    },
+    isDeactivated: {
+        type: DataTypes.BOOLEAN,
+        defaultValue: false
     },
     isDeleted: {
         type: DataTypes.BOOLEAN,
-        required: false,
+        defaultValue: false,
     },
     isDataErased: {
         type: DataTypes.BOOLEAN,
-        required: false,
+        defaultValue: false,
     },
     isModerator: {
         type: DataTypes.BOOLEAN,
-        required: false,
-    }
-})
+        defaultValue: false,
+    },
+}, {
+    indexes: [
+        {
+            unique: true,
+            fields: ['email']
+        }
+    ]
+});
 
+Account.addHook(
+    "beforeCreate",
+    account => (account.password = bcrypt.hashSync(account.password, 10))
+);
 
 module.exports = Account;

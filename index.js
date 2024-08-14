@@ -3,6 +3,11 @@ const express = require('express');
 const app = express();
 const initDatabase = require('./configs/init-db.js');
 const syncDatabase = require('./configs/sync-db.js');
+const router = require("./routes/routeIndex.js");
+
+app.use(express.json());
+//project
+app.use("/api", router);
 
 async function startServer() {
     await initDatabase();

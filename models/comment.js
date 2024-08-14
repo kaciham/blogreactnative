@@ -11,22 +11,16 @@ const Comment = sequelize.define("Comment", {
     },
     content: {
         type: DataTypes.STRING,
-        required: true,
-    },
-    createdDate: {
-        type: DataTypes.DATE,
-        required: true,
-    },
-    updatedDate: {
-        type: DataTypes.DATE,
         required: false,
     },
     postId: {
         type: DataTypes.INTEGER,
         references: {
             model: Post,
-            key: 'accountId',
+            key: 'postId',
         },
+        onDelete: 'CASCADE', // If an post is deleted, all associated comments will also be deleted
+        onUpdate: 'CASCADE',
     },
     accountId: {
         type: DataTypes.INTEGER,
@@ -34,8 +28,19 @@ const Comment = sequelize.define("Comment", {
             model: Account,
             key: 'accountId',
         },
+        onDelete: 'CASCADE', // If an account is deleted, all associated comments will also be deleted
+        onUpdate: 'CASCADE',
     },
-})
+});
+// ,
+//  {
+//     indexes: [
+//         {
+//             fields: ['accountId']
+//         }
+//     ]
+// }
+// )
 
 Post.hasMany(Comment, { foreignKey: 'postId' });
 Comment.belongsTo(Post, { foreignKey: 'postId' });

@@ -12,10 +12,6 @@ const Post = sequelize.define("Post", {
         type: DataTypes.STRING,
         required: true,
     },
-    lastName: {
-        type: DataTypes.STRING,
-        required: true,
-    },
     textContent: {
         type: DataTypes.STRING,
         required: false,
@@ -28,23 +24,23 @@ const Post = sequelize.define("Post", {
         type: DataTypes.BOOLEAN,
         required: false,
     },
-    createdDate: {
-        type: DataTypes.DATE,
-        required: true,
-    },
-    updatedDate: {
-        type: DataTypes.DATE,
-        required: false,
-    },
     accountId: {
         type: DataTypes.INTEGER,
+        allowNull: false,
         references: {
             model: Account,
             key: 'accountId',
         },
+        onDelete: 'CASCADE', // If an account is deleted, all associated posts will also be deleted
+        onUpdate: 'CASCADE',
     },
-})
-
+}, {
+    indexes: [
+        {
+            fields: ['accountId']
+        }
+    ]
+});
 Account.hasMany(Post, { foreignKey: 'accountId' });
 Post.belongsTo(Account, { foreignKey: 'accountId' });
 

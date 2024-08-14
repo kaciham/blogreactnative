@@ -1,16 +1,25 @@
 const Account = require("../models/account");
-const sequelize = require("sequelize");
+const Post = require("../models/post")
+const Comment = require("../models/comment")
+const { ValidationError } = require("sequelize");
+const jwt = require('jsonwebtoken');
 
-//CREATE
+// CREATE
+
 const createAccount = async (accountData) => {
-    const { firstName, lastName, email, password } = accountData;
-
     try {
+
+        const { firstName,
+            lastName,
+            email,
+            password } = accountData;
+
         const newAccount = await Account.create({
             firstName,
             lastName,
             email,
             password,
+            isDeactivated: false,
             isDeleted: false,
             isDataErased: false,
             isModerator: false
@@ -18,10 +27,267 @@ const createAccount = async (accountData) => {
 
         return newAccount;
     } catch (error) {
-        console.error("Error creating account:", error);
-        throw error;
+        if (error instanceof ValidationError) {
+            console.error("Validation error creating account:", error.errors);
+            throw error;
+        } else {
+            console.error("Error creating account:", error);
+            throw error;
+        }
+    };
+}
+
+const createPost = async (postData, token) => {
+    try {
+
+        const decoded = jwt.verify(token, process.env.ACCESS_TOKEN_SECRET);
+        const { email } = decoded.UserInfo;
+        const account = await Account.findOne({ where: { email } });
+        if (!account) {
+            throw new Error('Account not found');
+        }
+
+        const firstName = `${account.firstName}`;
+        const lastName = `${account.lastName}`;
+        const accountId = `${account.accountId}`;
+
+        const { title, textContent, imageContent, videoContent } = postData;
+        const newPost = await Post.create({
+            title,
+            textContent,
+            imageContent,
+            videoContent,
+            isDeleted: false,
+            firstName: firstName,
+            lastName: lastName,
+            accountId: accountId
+
+        })
+        return newPost;
+    }
+    catch (error) {
+        if (error instanceof ValidationError) {
+            console.error("Validation error creating post:", error.errors);
+            throw error;
+        } else {
+            console.error("Error creating post:", error);
+            throw error;
+        }
+    }
+}
+
+const createComment = async (commentData, postId, token) => {
+    try {
+        // Validate inputs if necessary
+        if (!commentData || !postId || !token) {
+            throw new Error('Invalid input data');
+        }
+
+        const decoded = jwt.verify(token, process.env.ACCESS_TOKEN_SECRET);
+        const { email } = decoded.UserInfo;
+
+        const account = await Account.findOne({ where: { email } });
+        if (!account) {
+            throw new Error('Account not found');
+        }
+
+        const { accountId, firstName, lastName } = account;
+        const { content } = commentData;
+
+        const newComment = await Comment.create({
+            content: content,  // Directly use commentData instead of assigning to another variable
+            accountId: accountId,  // Shorthand could be used, but it's explicit here for clarity
+            postId: postId
+        });
+
+        const result = {
+            ...newComment.get({ plain: true }), // Get plain object from Sequelize instance
+            firstName: firstName,
+            lastName: lastName,
+        };
+        return result;
+    } catch (error) {
+        if (error.name === 'ValidationError') {  // Fixed to match Sequelize ValidationError
+            console.error("Validation error creating comment:", error.errors);
+            throw new Error('Validation Error');
+        } else {
+            console.error("Error creating comment:", error);
+            throw new Error('Internal Server Error');
+        }
     }
 };
 
+//READ
 
-module.exports = createAccount;
+const getPosts = async () => {
+    try {
+        const allPosts = await Post.findAll();
+        return allPosts;
+    } catch (error) {
+        if (error instanceof ValidationError) {
+            console.error("Validation error creating account:", error.errors);
+            throw error;
+        } else {
+            console.error("Error creating account:", error);
+            throw error;
+        }
+    }
+}
+
+const getPost = async (id) => {
+    try {
+        const getPost = await Post.findByPk(id);
+        if (!getPost) {
+            throw new Error('Post not found');
+        }
+        return getPost;
+    } catch (error) {
+        if (error instanceof ValidationError) {
+            console.error("Validation error creating account:", error.errors);
+            throw error;
+        } else {
+            console.error("Error creating account:", error);
+            throw error;
+        }
+    }
+}
+
+const getCommentsByPostId = async (postId) => {
+    try {
+        // Check if the post exists
+        const post = await Post.findByPk(postId);
+        if (!post) {
+            throw new Error('Post not found');
+        }
+
+        // Find all comments associated with the postId
+        const comments = await Comment.findAll({
+            where: { postId },
+            include: [{
+                model: Account,
+                attributes: ['firstName', 'lastName'], // Include post title in the response if needed
+            }]
+        });
+
+        return comments;
+    } catch (error) {
+        throw new Error(`Could not fetch comments: ${error.message}`);
+    }
+};
+
+//UPDATE
+
+const updatePost = async (id, updatedData) => {
+    try {
+        // Find the post by ID
+        const post = await Post.findByPk(id);
+        if (!post) {
+            throw new Error('Post not found');
+        }
+        // Update the post with the new data
+        await post.update(updatedData);
+        // Return the updated post
+        return post;
+    } catch (error) {
+        if (error instanceof ValidationError) {
+            console.error("Validation error updating post:", error.errors);
+            throw error;
+        } else {
+            console.error("Error updating post:", error);
+            throw error;
+        }
+    }
+};
+
+const updateComment = async (id, updatedData) => {
+    try {
+        // Find the post by ID
+        const comment = await Comment.findByPk(id);
+        if (!comment) {
+            throw new Error('Post not found');
+        }
+
+        // Update the post with the new data
+        await comment.update(updatedData);
+
+        // Return the updated post
+        return comment;
+    } catch (error) {
+        if (error instanceof ValidationError) {
+            console.error("Validation error updating post:", error.errors);
+            throw error;
+        } else {
+            console.error("Error updating post:", error);
+            throw error;
+        }
+    }
+};
+
+const desactivateAccount = async (id) => {
+    try {
+        const account = await Account.findByPk(id);
+        if (!account) {
+            throw new Error('Account not found');
+        }
+        await account.update({ isDeactivated: true });
+    } catch (error) {
+        if (error instanceof ValidationError) {
+            console.error("Validation error desactivate account:", error.errors);
+            throw error;
+        } else {
+            console.error("Error desactivating account:", error);
+            throw error;
+        }
+    }
+}
+
+const deleteAccount = async(id) => {
+    
+}
+
+//DELETE
+
+const delelePostById = async (postId) => {
+    try {
+        const deleted = await Post.destroy({
+            where: { postId }
+        });
+
+        if (deleted === 0) {
+            throw new Error('Post not found or already deleted');
+        }
+
+        return { message: 'Post successfully deleted' };
+    } catch (error) {
+        if (error instanceof ValidationError) {
+            console.error("Validation error creating account:", error.errors);
+            throw error;
+        } else {
+            console.error("Error creating account:", error);
+            throw error;
+        }
+    }
+}
+const deleteCommentById = async (commentId) => {
+    try {
+        const deleted = await Comment.destroy({
+            where: { commentId }
+        });
+
+        if (deleted === 0) {
+            throw new Error('Comment not found or already deleted');
+        }
+
+        return { message: 'Comment successfully deleted' };
+    } catch (error) {
+        if (error instanceof ValidationError) {
+            console.error("Validation error creating account:", error.errors);
+            throw error;
+        } else {
+            console.error("Error creating account:", error);
+            throw error;
+        }
+    }
+}
+
+module.exports = { createAccount, createPost, createComment, getPosts, getPost, getCommentsByPostId, deleteCommentById, delelePostById, updatePost, updateComment, desactivateAccount }
