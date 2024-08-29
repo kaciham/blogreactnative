@@ -13,13 +13,14 @@ const login = asyncHandler(async (req, res) => {
     if (!foundAccount) {
         return res.status(401).json({ message: 'Unauthorized' })
     }
+    if (foundAccount.isDeleted === true && foundAccount.isDeactivated === true) {
+        return res.status(401).json({ message: 'Unauthorized, Account Deleted' })
+    }
     if (foundAccount.isDeactivated === true) {
         return res.status(401).json({ message: 'Unauthorized, Account Deactived' })
     }
 
-    if (foundAccount.isDeleted === true) {
-        return res.status(401).json({ message: 'Unauthorized, Account Deleted' })
-    }
+
     const match = await bcrypt.compare(password, foundAccount.password);
     if (!match) return res.status(401).json({ message: 'Unauthorized, wrong password' })
 

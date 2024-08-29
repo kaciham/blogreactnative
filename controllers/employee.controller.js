@@ -23,8 +23,8 @@ const createPost = async (req, res) => {
     try {
         const token = req.headers.authorization.split(' ')[1];
         const postData = req.body;
-        const postId = req.params;
-        const newPost = await employeeService.createPost(postData, postId, token);
+        // const { postId } = req.params;
+        const newPost = await employeeService.createPost(postData, token);
         return res.status(201).json(newPost);
     } catch (error) {
         console.error("Error creating post:", error);
@@ -99,6 +99,16 @@ const getCommentsByPostId = async (req, res) => {
     }
 };
 
+const getPostsByAccountId = async (req, res) => {
+    try {
+        const token = req.headers.authorization.split(' ')[1];
+        const postsByAccountId = await employeeService.getPostsByAccountId(token);
+        res.status(200).json(postsByAccountId);
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+
+}
 //UPDATE
 
 const updatePost = async (req, res) => {
@@ -140,11 +150,50 @@ const desactivateAccount = async (req, res) => {
         if (error.message === 'Account not found') {
             res.status(404).json({ error: error.message });
         } else {
-            res.status(500).json({ error: 'Failed to update account' });
+            res.status(500).json({ error: 'Failed to deactivate account' });
         }
     }
 }
 
+const reactivateAccount = async (req, res) => {
+    try {
+        const { accountId } = req.params;
+        await employeeService.reactivateAccount(accountId);
+        res.status(200).json({ "message": "the account is now reactivated" })
+    } catch (error) {
+        if (error.message === 'Account not found') {
+            res.status(404).json({ error: error.message });
+        } else {
+            res.status(500).json({ error: 'Failed to reeactivate account' });
+        }
+    }
+}
+
+const deleteAccount = async (req, res) => {
+    try {
+        const { accountId } = req.params;
+        await employeeService.deleteAccount(accountId);
+    } catch (error) {
+        if (error.message === 'Account not found') {
+            res.status(404).json({ error: error.message });
+        } else {
+            res.status(500).json({ error: 'Failed to delete account' });
+        }
+    }
+}
+
+const deleteAccountData = async (req, res) => {
+    try {
+        const { accountId } = req.params;
+        await employeeService.deleteAccountData(accountId);
+    } catch (error) {
+        if (error.message === 'Account not found') {
+            res.status(404).json({ error: error.message });
+        } else {
+            res.status(500).json({ error: 'Failed to deactivate account and erase account data' });
+        }
+    }
+}
 //DELETE
 
 const deletePost = async (req, res) => {
@@ -181,4 +230,4 @@ const deleteComment = async (req, res) => {
     }
 }
 
-module.exports = { createAccount, createPost, createComment, getAllPosts, getPostbyId, getCommentsByPostId, deletePost, deleteComment, updatePost, updateComment, desactivateAccount };     
+module.exports = { createAccount, createPost, createComment, getAllPosts, getPostbyId, getCommentsByPostId, deletePost, deleteComment, updatePost, updateComment, desactivateAccount, deleteAccount, deleteAccountData, reactivateAccount, getPostsByAccountId };     

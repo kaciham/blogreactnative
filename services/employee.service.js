@@ -175,6 +175,34 @@ const getCommentsByPostId = async (postId) => {
     }
 };
 
+const getPostsByAccountId = async (token) => {
+    try {
+        // Verify and decode the JWT token
+        const decoded = jwt.verify(token, process.env.ACCESS_TOKEN_SECRET);
+        const email = decoded.UserInfo.email;
+
+        // Find the account by email
+        const account = await Account.findOne({ where: { email } });
+        if (!account) {
+            throw new Error('Account not found');
+        }
+
+        // Fetch posts using the accountId
+        const posts = await Post.findAll({
+            where: { accountId: account.accountId }
+        });
+        if(!posts){
+            throw new Error ('no posts for this account')
+        }
+
+        return posts;
+
+    } catch (error) {
+        throw new Error(`Could not fetch posts: ${error.message}`);
+    }
+}
+
+
 //UPDATE
 
 const updatePost = async (id, updatedData) => {
@@ -241,10 +269,66 @@ const desactivateAccount = async (id) => {
     }
 }
 
-const deleteAccount = async(id) => {
-    
+const reactivateAccount = async (id) => {
+    try {
+        const account = await Account.findByPk(id);
+        if (!account) {
+            throw new Error('Account not found');
+        }
+        if (account.isDeactivated === false) {
+            await account.update({ isDeactivated: true });
+        }
+        else {
+            throw new Error('Account already deactivated')
+        }
+
+    } catch (error) {
+        if (error instanceof ValidationError) {
+            console.error("Validation error desactivate account:", error.errors);
+            throw error;
+        } else {
+            console.error("Error desactivating account:", error);
+            throw error;
+        }
+    }
 }
 
+const deleteAccount = async (id) => {
+    try {
+        const account = await Account.findByPk(id);
+        if (!account) {
+            throw new Error('Account not found');
+        }
+        await account.update({ isDeleted: true, isDeactivated: true });
+    } catch (error) {
+        if (error instanceof ValidationError) {
+            console.error("Validation error deleted account:", error.errors);
+            throw error;
+        } else {
+            console.error("Error deleting account:", error);
+            throw error;
+        }
+    }
+}
+
+const deleteAccountData = async (id) => {
+    try {
+        const account = await Account.findByPk(id);
+        if (!account) {
+            throw new Error('Account not found');
+        }
+        const deleteDataAccount = { password: "", email: "", isDeactivated: true, isDataErased: true, isDeleted: true };
+        await account.update(deleteDataAccount);
+    } catch (error) {
+        if (error instanceof ValidationError) {
+            console.error("Validation error deleted account and account data:", error.errors);
+            throw error;
+        } else {
+            console.error("Error deleting account and account data:", error);
+            throw error;
+        }
+    }
+}
 //DELETE
 
 const delelePostById = async (postId) => {
@@ -290,4 +374,4 @@ const deleteCommentById = async (commentId) => {
     }
 }
 
-module.exports = { createAccount, createPost, createComment, getPosts, getPost, getCommentsByPostId, deleteCommentById, delelePostById, updatePost, updateComment, desactivateAccount }
+module.exports = { createAccount, createPost, createComment, getPosts, getPost, getCommentsByPostId, deleteCommentById, delelePostById, updatePost, updateComment, desactivateAccount, deleteAccount, deleteAccountData, reactivateAccount, getPostsByAccountId }

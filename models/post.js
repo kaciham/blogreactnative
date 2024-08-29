@@ -10,19 +10,19 @@ const Post = sequelize.define("Post", {
     },
     title: {
         type: DataTypes.STRING,
-        required: true,
+        allowNull: true,
     },
     textContent: {
         type: DataTypes.STRING,
-        required: false,
+        allowNull: true,
     },
     imageContent: {
         type: DataTypes.STRING,
-        required: false,
+        allowNull: true,
     },
     isDeleted: {
         type: DataTypes.BOOLEAN,
-        required: false,
+        allowNull: true,
     },
     accountId: {
         type: DataTypes.INTEGER,
